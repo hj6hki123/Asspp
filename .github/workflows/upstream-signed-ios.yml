@@ -266,7 +266,7 @@ jobs:
           security import "${CERT_PATH}" \
             -P "${CERT_PASSWORD}" \
             -A \
-            -t cert \
+            -t pkcs12  \
             -k "${KEYCHAIN_PATH}"
           
           
