@@ -171,7 +171,7 @@ jobs:
   build-release:
     needs: detect-upstream
     if: needs.detect-upstream.outputs.should_build == 'true'
-    runs-on: macos-26
+    runs-on: macos-15
     outputs:
       release_url: ${{ steps.publish.outputs.release_url }}
       pages_base_url: ${{ steps.pages.outputs.pages_base_url }}
@@ -196,7 +196,6 @@ jobs:
         run: |
           set -euo pipefail
           for XCODE_APP in \
-            /Applications/Xcode_26.0.app \
             /Applications/Xcode_16.4.app \
             /Applications/Xcode_16.3.app \
             /Applications/Xcode.app
