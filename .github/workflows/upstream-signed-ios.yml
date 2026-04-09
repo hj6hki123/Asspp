@@ -196,7 +196,6 @@ jobs:
         run: |
           set -euo pipefail
           for XCODE_APP in \
-            /Applications/Xcode_26.4.app \
             /Applications/Xcode_26.3.app \
             /Applications/Xcode_26.2.app \
             /Applications/Xcode_26.1.app \
@@ -350,34 +349,6 @@ jobs:
             echo "export_method=${EXPORT_METHOD}"
             echo "build_number=${GITHUB_RUN_NUMBER}"
           } >> "$GITHUB_OUTPUT"
-
-
-      - name: Patch ButtonKit for Swift 6 actor isolation
-        working-directory: source
-        run: |
-          set -euo pipefail
-          xcodebuild -workspace Asspp.xcworkspace -scheme Asspp -resolvePackageDependencies -quiet
-          FILE=$(find . -path "*/ButtonKit/Sources/ButtonKit/Modifiers/Button+Events.swift" | head -n 1)
-          if [ -n "${FILE}" ]; then
-            echo "Patching: ${FILE}"
-            python3 - "${FILE}" <<'EOF'
-          import sys
-          path = sys.argv[1]
-          with open(path, 'r') as f:
-              content = f.read()
-          old = 'if value == nil || next.time > value!.time {'
-          new = 'if let current = value { if next.time > current.time {'
-          if old in content:
-              content = content.replace(old, new)
-              with open(path, 'w') as f:
-                  f.write(content)
-              print("Patch applied successfully.")
-          else:
-              print("Pattern not found, may already be patched or changed.")
-          EOF
-          else
-            echo "ButtonKit file not found, skipping patch."
-          fi
 
 
 
