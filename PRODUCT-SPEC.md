@@ -13,8 +13,10 @@ Fork-specific implementation details are documented in [FORK-CHANGES.md](./FORK-
 - Download the current version or historical versions of an app.
 - Keep multiple downloads for the same app version instead of forcing the user to delete the existing IPA first.
 - Export completed IPA files through the platform share UI, AirDrop on iOS, or Finder on macOS.
-- Let users choose the completed-download behavior in Settings: export IPA only, or show built-in install options in addition to export actions.
-- Download available updates for tracked macOS-connected iOS devices without directly installing them by default. If install options are enabled, the macOS update flow may install with `devicectl`.
+- Keep built-in install controls available on completed download pages while presenting IPA export first.
+- When using the built-in iOS OTA installer, generate the manifest with the IPA build version from saved App Store metadata.
+- Show completed-package OTA version diagnostics so users can verify the build version and metadata source before installing.
+- Download available updates for tracked macOS-connected iOS devices without directly installing them, then show the downloaded IPA for export or manual install.
 
 ## Signing Boundary
 
@@ -27,4 +29,6 @@ The fork auto-build P12 workflow signs the Asspp application itself only. Users 
 - App Store IPAs may remain subject to Apple account authorization and FairPlay restrictions.
 - External signing can help with sideloading workflows, but it does not remove DRM or guarantee that every IPA can be installed or launched.
 - External installation may fail when an existing app on the device has an incompatible signature, provisioning profile, or installation source.
+- OTA installation depends on accurate manifest metadata; the manifest should use the IPA build version, not only the App Store display version.
+- `Resources/Scripts/verify.ota.manifest.ps1` guards this OTA manifest invariant during local review.
 - Downloaded IPA files are stored under `Documents/Asspp/Packages/<bundle id>/<version>/<uuid>.ipa` inside the app sandbox.

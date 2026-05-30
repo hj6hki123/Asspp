@@ -54,11 +54,13 @@ Fork this repository to automatically build and sign the app with your own devel
 
 ## IPA Export and Signing
 
-Asspp can save completed downloads as `.ipa` files and export them through the system share sheet, AirDrop, or Finder. This lets you pass the IPA to external signing tools such as SideStore, AltStore, TrollStore, or your own developer signing workflow.
-
-Completed downloads default to an export-first workflow. In Settings, `Completed Downloads` can be changed to `Show install options` if you want Asspp to also show the built-in install controls.
+Asspp can save completed downloads as `.ipa` files and export them through the system share sheet, AirDrop, or Finder. This lets you pass the IPA to external signing tools such as SideStore, AltStore, TrollStore, or your own developer signing workflow. Built-in install controls remain available on completed downloads, but export is shown first so users can choose the path that fits their signing setup.
 
 IPA files are stored inside the app sandbox under `Documents/Asspp/Packages/<bundle id>/<version>/<uuid>.ipa`. Use `Export IPA`, AirDrop, or `Show in Finder` instead of relying on that internal path directly.
+
+When using the built-in iOS OTA installer, Asspp writes the manifest `bundle-version` from the downloaded IPA's saved App Store build metadata. This avoids using only the App Store display version when iOS decides whether a package can update an existing app.
+
+Completed package details show `OTA Build Version` and `OTA Version Source` so users can verify the exact version value that will be sent to iOS during a built-in OTA install.
 
 The fork auto-build P12 settings only sign the Asspp app itself. They do not re-sign IPAs downloaded inside Asspp. Downloaded App Store IPAs may still be subject to Apple account authorization and FairPlay restrictions, so external signing is not guaranteed to make every IPA installable or runnable.
 

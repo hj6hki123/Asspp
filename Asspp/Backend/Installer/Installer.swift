@@ -17,6 +17,7 @@ class Installer: Identifiable, @unchecked Sendable {
     @ObservationIgnored let id: UUID
     @ObservationIgnored let app: Application
     @ObservationIgnored let archive: AppStore.AppPackage
+    @ObservationIgnored let bundleVersion: String
     @ObservationIgnored let port = Int.random(in: 4000 ... 8000)
 
     enum Status {
@@ -30,12 +31,13 @@ class Installer: Identifiable, @unchecked Sendable {
     @MainActor
     var status: Status = .ready
 
-    init(archive: AppStore.AppPackage, path packagePath: URL) async throws {
+    init(archive: AppStore.AppPackage, path packagePath: URL, bundleVersion: String) async throws {
         let id: UUID = .init()
         self.id = id
         self.archive = archive
+        self.bundleVersion = bundleVersion
         app = try await Self.setupApp(port: port, secured: true)
-        logger.info("Installer app setup completed for ID: \(id)")
+        logger.info("Installer app setup completed for ID: \(id), bundle id: \(archive.software.bundleID), display version: \(archive.software.version), ota build version: \(bundleVersion)")
 
         app.get("*") { [weak self] req in
             guard let self else { return Response(status: .badGateway) }
@@ -116,6 +118,7 @@ class Installer: Identifiable, @unchecked Sendable {
             formattedPrice: "",
             primaryGenreName: "",
         ))
+        bundleVersion = ""
 
         app = try await Self.setupApp(port: port, secured: false)
 

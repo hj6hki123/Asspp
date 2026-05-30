@@ -7,10 +7,11 @@ The goal is to make Asspp useful as an IPA acquisition and archive manager while
 ## Summary
 
 - Completed downloads are presented as IPA files first.
-- Completed downloads default to export-only actions, while built-in install controls can be re-enabled in Settings.
+- Completed downloads show IPA export actions first while keeping built-in install controls available.
 - Users can export downloaded IPA files through the system share sheet, AirDrop on iOS, or Finder on macOS.
 - The same app version can be downloaded multiple times, so users do not need to delete an existing download before obtaining another copy.
-- The macOS connected-device update flow downloads the newer IPA by default. If install options are enabled, it can still install with `devicectl`.
+- The macOS connected-device update flow downloads the newer IPA and shows it to the user instead of installing it directly with `devicectl`.
+- iOS OTA install manifests now use the downloaded IPA's build version instead of the App Store display version.
 - The GitHub Actions build workflow now selects an Xcode installation that actually contains the required iPhoneOS SDK.
 - Project documentation now separates "signing Asspp itself" from "signing downloaded IPA files."
 
@@ -30,14 +31,11 @@ Fork behavior:
 - `Export IPA` uses SwiftUI `ShareLink` so the file can be passed to Files, AirDrop, a signing app, or another destination supported by the platform.
 - iOS keeps an explicit `Send IPA via AirDrop` action.
 - macOS keeps a `Show in Finder` action for direct file access.
-- The completed package page defaults to export-only behavior.
-- Settings -> Completed Downloads can be changed to `Show install options` to also show Asspp's built-in install controls.
+- Built-in install controls remain available below the IPA export section.
 - IPA files are stored inside the app sandbox at `Documents/Asspp/Packages/<bundle id>/<version>/<uuid>.ipa`.
 
 Touched file:
 
-- `Asspp/Backend/AppSettings.swift`
-- `Asspp/Interface/Setting/SettingView.swift`
 - `Asspp/Interface/Download/PackageView.swift`
 
 ### Re-Download Without Deleting
@@ -71,12 +69,35 @@ Fork behavior:
 - The update flow still checks App Store metadata and downloads the newer IPA.
 - After download completion, it moves to a `downloaded` state.
 - The UI shows `Show IPA`, letting the user open the package detail page and export the file for external signing or installation.
-- If Settings -> Completed Downloads is set to `Show install options`, the update flow uses the previous direct `devicectl` install behavior.
+- Asspp no longer attempts to replace the installed app during this update flow.
 
 Touched files:
 
 - `Asspp/Backend/DeviceCTL/DeviceManager.swift`
 - `Asspp/Interface/Installed/InstalledListView.swift`
+
+### OTA Install Manifest Uses Build Version
+
+Original behavior:
+
+- The iOS OTA manifest wrote `bundle-version` from `archive.software.version`.
+- That value is the App Store display version, not necessarily the IPA's `CFBundleVersion`.
+- When installing over an existing app, iOS uses the manifest metadata to decide whether the package is a valid update candidate.
+
+Fork behavior:
+
+- Completed downloads read the saved App Store `iTunesMetadata.plist` and use its `bundleVersion` value for OTA installation.
+- If metadata is missing, the installer falls back to the package display version so older or incomplete records still produce a manifest.
+- This keeps the OTA manifest aligned with the actual downloaded App Store package and removes one concrete cause of "already installed" update rejection.
+- Completed package details show `OTA Build Version` and `OTA Version Source` so failed installs can be diagnosed from the value actually sent to iOS.
+
+Touched files:
+
+- `Asspp/Backend/Downloader/PackageManifest.swift`
+- `Asspp/Backend/Installer/Installer.swift`
+- `Asspp/Backend/Installer/Installer+Compute.swift`
+- `Asspp/Interface/Download/PackageView.swift`
+- `Resources/Scripts/verify.ota.manifest.ps1`
 
 ## Signing Boundary
 
@@ -111,6 +132,7 @@ Fork behavior:
 
 - The iOS job now tries several Xcode installations and only accepts one where `xcodebuild -showsdks` contains `iphoneos`.
 - The macOS job also selects the first available Xcode installation and prints the selected version.
+- Both build jobs run the OTA manifest metadata verifier before compiling.
 
 Touched file:
 
@@ -135,15 +157,18 @@ Touched file:
 - `.github/workflows/build.yml`
 - `.github/workflows/upstream-signed-ios.yml`
 - `AGENTS.md`
-- `Asspp/Backend/AppSettings.swift`
 - `PRODUCT-SPEC.md`
 - `README.md`
 - `Asspp/Backend/DeviceCTL/DeviceManager.swift`
+- `Asspp/Backend/Downloader/PackageManifest.swift`
 - `Asspp/Backend/Downloader/Downloads.swift`
+- `Asspp/Backend/Installer/Installer.swift`
+- `Asspp/Backend/Installer/Installer+Compute.swift`
 - `Asspp/Interface/Download/PackageView.swift`
 - `Asspp/Interface/Installed/InstalledListView.swift`
 - `Asspp/Interface/Search/ProductVersionView.swift`
 - `Asspp/Interface/Search/ProductView.swift`
+- `Resources/Scripts/verify.ota.manifest.ps1`
 
 ## Not Changed
 

@@ -68,7 +68,6 @@
 
     private struct AppRow: View {
         @State var vm = AppStore.this
-        @State var settings = AppSettings.this
         var preferredIconSize: CGFloat? {
             50
         }
@@ -114,7 +113,7 @@
         var actionView: some View {
             switch app.state {
             case .idle, .error:
-                Button(settings.completedDownloadAction == .showInstallOptions ? "Update" : "Download Update") {
+                Button("Download Update") {
                     action()
                 }
                 .buttonStyle(.borderedProminent)
