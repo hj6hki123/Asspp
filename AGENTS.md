@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Asspp is a multi-account App Store management app (iOS + macOS) for searching, downloading, and exporting IPA files. It uses an Xcode workspace (`Asspp.xcworkspace`) with SPM dependencies including [ApplePackage](https://github.com/Lakr233/ApplePackage), the core library for App Store API communication, IPA handling, and App Store SINF metadata injection.
+Asspp is a multi-account App Store management app (iOS + macOS) for searching, downloading, exporting, and optionally installing IPA files. It uses an Xcode workspace (`Asspp.xcworkspace`) with SPM dependencies including [ApplePackage](https://github.com/Lakr233/ApplePackage), the core library for App Store API communication, IPA handling, and App Store SINF metadata injection.
 
 Bundle ID: `wiki.qaq.Asspp`. Deployment targets: iOS 17.0, macOS 15.0. Supports iPhone, iPad, and Mac (native, not Catalyst). No test targets exist.
 
@@ -57,8 +57,9 @@ xcconfig hierarchy: `Debug.xcconfig`/`Release.xcconfig` → `Base.xcconfig` → 
 
 - **AppStore/**: `AppStore` singleton manages accounts and device identifier. `AuthenticationService` handles auth. `AppPackage`/`AppPackageArchive`/`UserAccount` are model wrappers around ApplePackage types.
 - **Downloader/**: `Downloads` singleton manages download queue via `Digger`. `PackageManifest` tracks per-download state and App Store SINF/iTunes metadata injection. Downloads persist to `Documents/Asspp/Packages/` and may contain multiple copies of the same app version for external signing workflows.
-- **Installer/**: iOS-only Vapor HTTPS server code for OTA installation via `itms-services://` protocol. This is no longer the primary completed-download flow; users should export IPA files for external signing or installation.
-- **DeviceCTL/**: macOS-only device management via `devicectl` CLI. `DeviceManager` can inspect connected iOS devices and download available updates as IPA files.
+- **Installer/**: iOS-only Vapor HTTPS server code for OTA installation via `itms-services://` protocol. This is shown only when Settings → Completed Downloads is set to show install options.
+- **DeviceCTL/**: macOS-only device management via `devicectl` CLI. `DeviceManager` can inspect connected iOS devices, download available updates as IPA files, and optionally install when install options are enabled.
+- **AppSettings.swift**: `AppSettings.this` stores fork-specific preferences, including whether completed downloads show export-only actions or additional install controls.
 - **LogManager.swift**: Thread-safe log singleton feeding `Settings/LogView`.
 
 ### Interface Layer (`Asspp/Interface/`)

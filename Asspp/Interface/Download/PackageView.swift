@@ -26,12 +26,17 @@ struct PackageView: View {
     }
 
     @Environment(\.dismiss) var dismiss
+    #if os(iOS)
+        @State private var installer: Installer?
+        @State private var error: String = ""
+    #endif
     #if os(macOS)
         @State private var copied = false
     #endif
 
     @State private var vm = AppStore.this
     @State private var downloads = Downloads.this
+    @State private var settings = AppSettings.this
 
     var body: some View {
         Form {
@@ -87,6 +92,37 @@ struct PackageView: View {
                     Text("IPA File")
                 } footer: {
                     Text("Export this IPA to sign or install it with another tool.")
+                }
+
+                if settings.completedDownloadAction == .showInstallOptions {
+                    #if os(macOS)
+                        DeviceCTLInstallSection(package: pkg)
+                    #endif
+                    #if os(iOS)
+                        Section {
+                            AsyncButton {
+                                installer = try await Installer(archive: archive, path: url)
+                            } label: {
+                                Text("Install")
+                            }
+                            .disabledWhenLoading()
+                            .sheet(item: $installer) {
+                                installer?.destroy()
+                                installer = nil
+                            } content: {
+                                InstallerView(installer: $0)
+                            }
+                        } header: {
+                            Text("Control")
+                        } footer: {
+                            if error.isEmpty {
+                                Text("Direct install may have limitations that cannot be bypassed. Export the IPA if you want to sign it with another tool.")
+                            } else {
+                                Text(error)
+                                    .foregroundStyle(.red)
+                            }
+                        }
+                    #endif
                 }
 
                 Section {

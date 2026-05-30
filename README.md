@@ -6,6 +6,8 @@ Asspp is a powerful client designed for users who need to manage **multiple Appl
 
 [简体中文 🇨🇳](./Resources/i18n/zh-Hans/README.md)
 
+Fork-specific changes: [FORK-CHANGES.md](./FORK-CHANGES.md)
+
 ![Preview](./Resources/Screenshots/Apptisan_Asspp.png)
 
 ## ✨ Why Asspp?
@@ -53,6 +55,10 @@ Fork this repository to automatically build and sign the app with your own devel
 ## IPA Export and Signing
 
 Asspp can save completed downloads as `.ipa` files and export them through the system share sheet, AirDrop, or Finder. This lets you pass the IPA to external signing tools such as SideStore, AltStore, TrollStore, or your own developer signing workflow.
+
+Completed downloads default to an export-first workflow. In Settings, `Completed Downloads` can be changed to `Show install options` if you want Asspp to also show the built-in install controls.
+
+IPA files are stored inside the app sandbox under `Documents/Asspp/Packages/<bundle id>/<version>/<uuid>.ipa`. Use `Export IPA`, AirDrop, or `Show in Finder` instead of relying on that internal path directly.
 
 The fork auto-build P12 settings only sign the Asspp app itself. They do not re-sign IPAs downloaded inside Asspp. Downloaded App Store IPAs may still be subject to Apple account authorization and FairPlay restrictions, so external signing is not guaranteed to make every IPA installable or runnable.
 
