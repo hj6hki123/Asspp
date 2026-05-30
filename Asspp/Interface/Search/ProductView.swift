@@ -35,7 +35,7 @@ struct ProductView: View {
     }
 
     @State private var selection: AppStore.UserAccount.ID = .init()
-    @State private var licenseHint: String = ""
+    @State private var licenseHint: Hint?
     @State private var showLicenseAlert = false
     @State private var hint: Hint?
 
@@ -100,9 +100,9 @@ struct ProductView: View {
                                     app: archive.package.software,
                                 )
                             }
-                            licenseHint = String(localized: "Request Succeeded")
+                            licenseHint = Hint(message: String(localized: "Request Succeeded"), color: .green)
                         } catch {
-                            licenseHint = error.localizedDescription
+                            licenseHint = Hint(message: error.localizedDescription, color: .red)
                         }
                     }
                 }
@@ -175,7 +175,7 @@ struct ProductView: View {
                             app: archive.package.software,
                         )
                     }
-                    licenseHint = String(localized: "Request Succeeded")
+                    licenseHint = Hint(message: String(localized: "Request Succeeded"), color: .green)
                 } label: {
                     Text("Acquire License")
                 }
@@ -185,11 +185,11 @@ struct ProductView: View {
         } header: {
             Text("Pricing")
         } footer: {
-            if licenseHint.isEmpty {
-                Text("Acquiring a license is not available for paid apps. Purchase from the App Store first, then download here. If you've already purchased it, this may fail.")
+            if let licenseHint {
+                Text(licenseHint.message)
+                    .foregroundStyle(licenseHint.color ?? .primary)
             } else {
-                Text(licenseHint)
-                    .foregroundStyle(.red)
+                Text("Acquiring a license is not available for paid apps. Purchase from the App Store first, then download here. If you've already purchased it, this may fail.")
             }
         }
     }
