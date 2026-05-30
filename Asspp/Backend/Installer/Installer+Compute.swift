@@ -91,7 +91,7 @@ extension Installer {
                     ],
                     "metadata": [
                         "bundle-identifier": archive.software.bundleID,
-                        "bundle-version": bundleVersion.isEmpty ? archive.software.version : bundleVersion,
+                        "bundle-version": archive.software.version,
                         "kind": "software",
                         "title": archive.software.name,
                     ],

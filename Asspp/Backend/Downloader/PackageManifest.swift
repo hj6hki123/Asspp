@@ -42,42 +42,6 @@ class PackageManifest: Identifiable, Codable, Hashable, Equatable {
         state.status == .completed
     }
 
-    private var iTunesMetadataDictionary: [String: Any]? {
-        (try? PropertyListSerialization.propertyList(
-            from: iTunesMetadata,
-            options: [],
-            format: nil
-        )) as? [String: Any]
-    }
-
-    var installBundleVersion: String {
-        if let bundleVersion = iTunesMetadataDictionary?["bundleVersion"] as? String,
-            !bundleVersion.isEmpty
-        {
-            return bundleVersion
-        }
-
-        if let bundleVersion = package.downloadOutput?.bundleVersion, !bundleVersion.isEmpty {
-            return bundleVersion
-        }
-
-        return package.software.version
-    }
-
-    var installBundleVersionSource: String {
-        if let bundleVersion = iTunesMetadataDictionary?["bundleVersion"] as? String,
-            !bundleVersion.isEmpty
-        {
-            return "iTunesMetadata.plist"
-        }
-
-        if let bundleVersion = package.downloadOutput?.bundleVersion, !bundleVersion.isEmpty {
-            return "DownloadOutput"
-        }
-
-        return "Display Version Fallback"
-    }
-
     func waitForCompletion(timeout: TimeInterval? = nil) async {
         let start = Date().timeIntervalSince1970
         while true {

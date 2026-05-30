@@ -27,13 +27,9 @@ xcodebuild -workspace Asspp.xcworkspace -scheme Asspp -configuration Debug -dest
 
 # CI release build (macOS zip)
 ./Resources/Scripts/compile.release.osx.sh "$(pwd)" "$(pwd)/Asspp.zip"
-
-# Verify OTA manifest uses the downloaded IPA build version
-pwsh ./Resources/Scripts/verify.ota.manifest.ps1
 ```
 
 **Important**: Always use `Asspp.xcworkspace` (not `.xcodeproj`) because the workspace manages SPM package resolution. Always pipe xcodebuild output through `xcbeautify` to reduce output verbosity and save tokens.
-Run `pwsh ./Resources/Scripts/verify.ota.manifest.ps1` after touching OTA installer or download manifest code.
 
 ## Code Signing Setup
 
@@ -61,8 +57,9 @@ xcconfig hierarchy: `Debug.xcconfig`/`Release.xcconfig` → `Base.xcconfig` → 
 
 - **AppStore/**: `AppStore` singleton manages accounts and device identifier. `AuthenticationService` handles auth. `AppPackage`/`AppPackageArchive`/`UserAccount` are model wrappers around ApplePackage types.
 - **Downloader/**: `Downloads` singleton manages download queue via `Digger`. `PackageManifest` tracks per-download state and App Store SINF/iTunes metadata injection. Downloads persist to `Documents/Asspp/Packages/` and may contain multiple copies of the same app version for external signing workflows.
-- **Installer/**: iOS-only Vapor HTTPS server code for OTA installation via `itms-services://` protocol. OTA manifests use the downloaded IPA's build version from saved App Store metadata. Completed download pages show OTA build version diagnostics and keep install controls available after IPA export actions.
-- **DeviceCTL/**: macOS-only device management via `devicectl` CLI. `DeviceManager` can inspect connected iOS devices and download available updates as IPA files.
+- **Installer/**: iOS-only Vapor HTTPS server code for OTA installation via `itms-services://` protocol. This is shown only when Settings → Completed Downloads is set to show install options.
+- **DeviceCTL/**: macOS-only device management via `devicectl` CLI. `DeviceManager` can inspect connected iOS devices, download available updates as IPA files, and optionally install when install options are enabled.
+- **AppSettings.swift**: `AppSettings.this` stores fork-specific preferences, including whether completed downloads show export-only actions or additional install controls.
 - **LogManager.swift**: Thread-safe log singleton feeding `Settings/LogView`.
 
 ### Interface Layer (`Asspp/Interface/`)

@@ -36,6 +36,7 @@ struct PackageView: View {
 
     @State private var vm = AppStore.this
     @State private var downloads = Downloads.this
+    @State private var settings = AppSettings.this
 
     var body: some View {
         Form {
@@ -49,11 +50,6 @@ struct PackageView: View {
                 CopyableRow(label: "Bundle ID", value: archive.software.bundleID, monospaced: true)
                 Text("Version")
                     .badge(archive.software.version)
-                if pkg.completed {
-                    CopyableRow(label: "OTA Build Version", value: pkg.installBundleVersion, monospaced: true)
-                    Text("OTA Version Source")
-                        .badge(pkg.installBundleVersionSource)
-                }
                 Text("Developer")
                     .badge(archive.software.sellerName)
                 if !archive.software.primaryGenreName.isEmpty {
@@ -98,34 +94,36 @@ struct PackageView: View {
                     Text("Export this IPA to sign or install it with another tool.")
                 }
 
-                #if os(macOS)
-                    DeviceCTLInstallSection(package: pkg)
-                #endif
-                #if os(iOS)
-                    Section {
-                        AsyncButton {
-                            installer = try await Installer(archive: archive, path: url, bundleVersion: pkg.installBundleVersion)
-                        } label: {
-                            Text("Install")
+                if settings.completedDownloadAction == .showInstallOptions {
+                    #if os(macOS)
+                        DeviceCTLInstallSection(package: pkg)
+                    #endif
+                    #if os(iOS)
+                        Section {
+                            AsyncButton {
+                                installer = try await Installer(archive: archive, path: url)
+                            } label: {
+                                Text("Install")
+                            }
+                            .disabledWhenLoading()
+                            .sheet(item: $installer) {
+                                installer?.destroy()
+                                installer = nil
+                            } content: {
+                                InstallerView(installer: $0)
+                            }
+                        } header: {
+                            Text("Control")
+                        } footer: {
+                            if error.isEmpty {
+                                Text("Direct install may have limitations that cannot be bypassed. Export the IPA if you want to sign it with another tool.")
+                            } else {
+                                Text(error)
+                                    .foregroundStyle(.red)
+                            }
                         }
-                        .disabledWhenLoading()
-                        .sheet(item: $installer) {
-                            installer?.destroy()
-                            installer = nil
-                        } content: {
-                            InstallerView(installer: $0)
-                        }
-                    } header: {
-                        Text("Control")
-                    } footer: {
-                        if error.isEmpty {
-                            Text("Direct install may have limitations that cannot be bypassed. Export the IPA if you want to sign it with another tool.")
-                        } else {
-                            Text(error)
-                                .foregroundStyle(.red)
-                        }
-                    }
-                #endif
+                    #endif
+                }
 
                 Section {
                     NavigationLink("Content Viewer") {

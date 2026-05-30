@@ -186,7 +186,14 @@
                 )
             }
 
-            app.state = .downloaded(request)
+            if AppSettings.this.completedDownloadAction == .showInstallOptions {
+                app.state = .installing
+                try await DeviceCTL.install(ipa: request.targetLocation, to: device, process: process)
+                app.info = updatedApp
+                installedApps[device.id, default: []].insert(app.info)
+            } else {
+                app.state = .downloaded(request)
+            }
         }
 
         private func resetError() {
