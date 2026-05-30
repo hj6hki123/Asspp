@@ -22,6 +22,16 @@ struct WelcomeView: View {
                 Text("Welcome to Asspp")
                     .font(.system(.headline, design: .rounded))
 
+                VStack(spacing: 6) {
+                    Text("hj6hki123 Fork")
+                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    Text("Customized for IPA export, repeat downloads, and optional install controls.")
+                        .font(.footnote)
+                        .multilineTextAlignment(.center)
+                }
+                .foregroundStyle(.secondary)
+                .padding(.horizontal)
+
                 Spacer().frame(height: 0)
             }
 
