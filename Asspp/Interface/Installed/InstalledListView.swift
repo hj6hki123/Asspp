@@ -97,23 +97,7 @@
 
                 Spacer()
 
-                Button {
-                    action()
-                } label: {
-                    switch app.state {
-                    case .idle, .error:
-                        Text("Update")
-                    case .checking:
-                        Text("Checking")
-                    case let .downloading(manifest):
-                        Text("Downloading \(manifest.state.percent * 100, specifier: "%.02f")%")
-                    case .installing:
-                        Text("Installing")
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(app.state != .idle)
+                actionView
             }
             .overlay {
                 if case let .error(message) = app.state {
@@ -123,6 +107,39 @@
                 }
             }
             .animation(.smooth, value: app.state)
+        }
+
+        @ViewBuilder
+        var actionView: some View {
+            switch app.state {
+            case .idle, .error:
+                Button("Download Update") {
+                    action()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+            case .checking:
+                Button("Checking") {}
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(true)
+            case let .downloading(manifest):
+                Button("Downloading \(manifest.state.percent * 100, specifier: "%.02f")%") {}
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(true)
+            case .installing:
+                Button("Preparing") {}
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(true)
+            case let .downloaded(manifest):
+                NavigationLink("Show IPA") {
+                    PackageView(pkg: manifest)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+            }
         }
     }
 #endif

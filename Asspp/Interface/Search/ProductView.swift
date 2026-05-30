@@ -217,23 +217,16 @@ struct ProductView: View {
                 NavigationLink(value: req) {
                     Text("Show Download")
                 }
+                AsyncButton {
+                    try await requestDownload()
+                } label: {
+                    Text("Download Again")
+                }
+                .disabledWhenLoading()
+                .disabled(account == nil)
             } else {
                 AsyncButton {
-                    guard let account else { return }
-                    do {
-                        try await dvm.startDownload(for: archive.package, accountID: account.id)
-                        hint = Hint(message: String(localized: "Download Requested"), color: nil)
-                        if let req = dvm.downloadRequest(forArchive: archive.package) {
-                            navigationPath.append(req)
-                        }
-                    } catch {
-                        if case ApplePackageError.licenseRequired = error, archive.package.software.price == 0 {
-                            showLicenseAlert = true
-                        } else {
-                            hint = Hint(message: String(localized: "Unable to retrieve download URL. Please try again later.") + "\n" + error.localizedDescription, color: .red)
-                        }
-                        throw error
-                    }
+                    try await requestDownload()
                 } label: {
                     Text("Request Download")
                 }
@@ -246,9 +239,29 @@ struct ProductView: View {
             if let hint {
                 Text(hint.message)
                     .foregroundStyle(hint.color ?? .primary)
+            } else if !dvm.downloadRequests(forArchive: archive.package).isEmpty {
+                Text("You can keep multiple IPA copies of the same version and export them for external signing tools.")
             } else {
                 Text("Package can be installed later in download page.")
             }
+        }
+    }
+
+    private func requestDownload() async throws {
+        guard let account else { return }
+        do {
+            try await dvm.startDownload(for: archive.package, accountID: account.id)
+            hint = Hint(message: String(localized: "Download Requested"), color: nil)
+            if let req = dvm.downloadRequest(forArchive: archive.package) {
+                navigationPath.append(req)
+            }
+        } catch {
+            if case ApplePackageError.licenseRequired = error, archive.package.software.price == 0 {
+                showLicenseAlert = true
+            } else {
+                hint = Hint(message: String(localized: "Unable to retrieve download URL. Please try again later.") + "\n" + error.localizedDescription, color: .red)
+            }
+            throw error
         }
     }
 }

@@ -26,10 +26,6 @@ struct PackageView: View {
     }
 
     @Environment(\.dismiss) var dismiss
-    #if os(iOS)
-        @State private var installer: Installer?
-        @State private var error: String = ""
-    #endif
     #if os(macOS)
         @State private var copied = false
     #endif
@@ -66,25 +62,12 @@ struct PackageView: View {
             }
 
             if pkg.completed {
-                #if os(macOS)
-                    DeviceCTLInstallSection(package: pkg)
-                #endif
-                #if os(iOS)
-                    Section {
-                        AsyncButton {
-                            installer = try await Installer(archive: archive, path: url)
-                        } label: {
-                            Text("Install")
-                        }
-                        .disabledWhenLoading()
-                        .sheet(item: $installer) {
-                            installer?.destroy()
-                            installer = nil
-                        } content: {
-                            InstallerView(installer: $0)
-                        }
-
-                        Button("Install via AirDrop") {
+                Section {
+                    ShareLink(item: url) {
+                        Label("Export IPA", systemImage: "square.and.arrow.up")
+                    }
+                    #if os(iOS)
+                        Button("Send IPA via AirDrop") {
                             let newUrl = temporaryDirectory
                                 .appendingPathComponent("\(archive.software.bundleID)-\(archive.software.version)")
                                 .appendingPathExtension("ipa")
@@ -92,17 +75,19 @@ struct PackageView: View {
                             try? FileManager.default.copyItem(at: url, to: newUrl)
                             AirDrop(items: [newUrl])
                         }
-                    } header: {
-                        Text("Control")
-                    } footer: {
-                        if error.isEmpty {
-                            Text("Direct install may have limitations that cannot be bypassed. Use AirDrop if possible on another device.")
-                        } else {
-                            Text(error)
-                                .foregroundStyle(.red)
+                    #endif
+                    #if os(macOS)
+                        Button {
+                            NSWorkspace.shared.activateFileViewerSelecting([url])
+                        } label: {
+                            Label("Show in Finder", systemImage: "folder")
                         }
-                    }
-                #endif
+                    #endif
+                } header: {
+                    Text("IPA File")
+                } footer: {
+                    Text("Export this IPA to sign or install it with another tool.")
+                }
 
                 Section {
                     NavigationLink("Content Viewer") {

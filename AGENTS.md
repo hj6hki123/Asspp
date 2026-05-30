@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Asspp is a multi-account App Store management app (iOS + macOS) for searching, downloading, and installing IPA files. It uses an Xcode workspace (`Asspp.xcworkspace`) with SPM dependencies including [ApplePackage](https://github.com/Lakr233/ApplePackage), the core library for App Store API communication, IPA handling, and signature injection.
+Asspp is a multi-account App Store management app (iOS + macOS) for searching, downloading, and exporting IPA files. It uses an Xcode workspace (`Asspp.xcworkspace`) with SPM dependencies including [ApplePackage](https://github.com/Lakr233/ApplePackage), the core library for App Store API communication, IPA handling, and App Store SINF metadata injection.
 
 Bundle ID: `wiki.qaq.Asspp`. Deployment targets: iOS 17.0, macOS 15.0. Supports iPhone, iPad, and Mac (native, not Catalyst). No test targets exist.
 
@@ -56,9 +56,9 @@ xcconfig hierarchy: `Debug.xcconfig`/`Release.xcconfig` → `Base.xcconfig` → 
 ### Backend Layer (`Asspp/Backend/`)
 
 - **AppStore/**: `AppStore` singleton manages accounts and device identifier. `AuthenticationService` handles auth. `AppPackage`/`AppPackageArchive`/`UserAccount` are model wrappers around ApplePackage types.
-- **Downloader/**: `Downloads` singleton manages download queue via `Digger`. `PackageManifest` tracks per-download state and IPA signature injection. Downloads persist to `Documents/Asspp/Packages/`.
-- **Installer/**: iOS-only Vapor HTTPS server serving IPA files for OTA installation via `itms-services://` protocol. Uses TLS certs from `Certificates/localhost.qaq.wiki/` bundle.
-- **DeviceCTL/**: macOS-only device management via `devicectl` CLI. `DeviceManager` handles app installation to connected iOS devices.
+- **Downloader/**: `Downloads` singleton manages download queue via `Digger`. `PackageManifest` tracks per-download state and App Store SINF/iTunes metadata injection. Downloads persist to `Documents/Asspp/Packages/` and may contain multiple copies of the same app version for external signing workflows.
+- **Installer/**: iOS-only Vapor HTTPS server code for OTA installation via `itms-services://` protocol. This is no longer the primary completed-download flow; users should export IPA files for external signing or installation.
+- **DeviceCTL/**: macOS-only device management via `devicectl` CLI. `DeviceManager` can inspect connected iOS devices and download available updates as IPA files.
 - **LogManager.swift**: Thread-safe log singleton feeding `Settings/LogView`.
 
 ### Interface Layer (`Asspp/Interface/`)
@@ -75,7 +75,7 @@ SwiftUI views organized by feature: Account, Search, Download, Installed (macOS 
 
 ## Dependencies (SPM via Xcode)
 
-- **ApplePackage** (remote) — App Store protocol, IPA handling
+- **ApplePackage** (remote) — App Store protocol, IPA handling, SINF metadata injection
 - **Vapor** — HTTPS server for iOS OTA installation
 - **Digger** — Download manager with progress/speed tracking
 - **Kingfisher** — Async image loading

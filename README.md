@@ -12,7 +12,7 @@ Asspp is a powerful client designed for users who need to manage **multiple Appl
 
 - **🌍 Multi-Region Access**: Browse and search the US, Japan, China, or any other App Store region seamlessly. No more switching system accounts just to check an app.
 - **👥 Multi-Account Support**: Add unlimited Apple IDs. Asspp automatically uses the correct account for the store you are browsing.
-- **📦 IPA Management**: Download official, signed IPAs directly from Apple's servers for backup or sideloading.
+- **📦 IPA Management**: Download official IPAs directly from Apple's servers, keep multiple copies, and export them for backup or external signing tools.
 - **⏪ History Versions**: Need an older version of an app? Asspp makes it easy to find and download previous releases.
 - **📱 Cross-Platform**: Native experience on both **iOS** and **macOS**.
 
@@ -49,6 +49,12 @@ Fork this repository to automatically build and sign the app with your own devel
 - **iOS**: iOS 17.0 or later.
 - **macOS**: macOS 15.0 or later.
 - **Apple ID**: Required to communicate with App Store APIs.
+
+## IPA Export and Signing
+
+Asspp can save completed downloads as `.ipa` files and export them through the system share sheet, AirDrop, or Finder. This lets you pass the IPA to external signing tools such as SideStore, AltStore, TrollStore, or your own developer signing workflow.
+
+The fork auto-build P12 settings only sign the Asspp app itself. They do not re-sign IPAs downloaded inside Asspp. Downloaded App Store IPAs may still be subject to Apple account authorization and FairPlay restrictions, so external signing is not guaranteed to make every IPA installable or runnable.
 
 ## 🚨 Special Notice
 

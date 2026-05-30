@@ -129,7 +129,10 @@
                     app.state = .error(error.localizedDescription)
                     try? await Task.sleep(for: .seconds(1))
                 }
-                app.state = .idle
+                if case .downloaded = app.state {
+                } else {
+                    app.state = .idle
+                }
                 await MainActor.run {
                     busyDevices[device] = nil
                 }
@@ -183,10 +186,7 @@
                 )
             }
 
-            app.state = .installing
-            try await DeviceCTL.install(ipa: request.targetLocation, to: device, process: process)
-            app.info = updatedApp
-            installedApps[device.id, default: []].insert(app.info)
+            app.state = .downloaded(request)
         }
 
         private func resetError() {
@@ -256,6 +256,7 @@
             case checking
             case downloading(_ manifest: PackageManifest)
             case installing
+            case downloaded(_ manifest: PackageManifest)
             case error(_ message: String)
         }
 

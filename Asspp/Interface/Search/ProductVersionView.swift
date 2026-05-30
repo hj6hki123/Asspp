@@ -18,37 +18,45 @@ struct ProductVersionView: View {
 
     var body: some View {
         if let req = dvm.downloadRequest(forArchive: package) {
-            NavigationLink(destination: PackageView(pkg: req)) {
-                HStack {
-                    Text(package.software.version)
-                    Spacer()
-                    Text("Show Download")
-                }
-            }
-        } else {
-            AsyncButton {
-                do {
-                    try await dvm.startDownload(for: package, accountID: accountIdentifier)
-                    hint = Hint(message: String(localized: "Download Requested"), color: nil)
-                } catch {
-                    hint = Hint(message: String(localized: "Unable to retrieve download URL. Please try again later.") + "\n" + error.localizedDescription, color: .red)
-                    throw error
-                }
-            } label: {
-                VStack(alignment: .leading) {
+            VStack(alignment: .leading) {
+                NavigationLink(destination: PackageView(pkg: req)) {
                     HStack {
                         Text(package.software.version)
                         Spacer()
-                        Text("Request Download")
-                    }
-
-                    if let hint {
-                        Text(hint.message)
-                            .foregroundStyle(hint.color ?? .primary)
+                        Text("Show Download")
                     }
                 }
+
+                downloadButton(title: "Download Again")
             }
-            .disabledWhenLoading()
+        } else {
+            downloadButton(title: "Request Download")
         }
+    }
+
+    private func downloadButton(title: String) -> some View {
+        AsyncButton {
+            do {
+                try await dvm.startDownload(for: package, accountID: accountIdentifier)
+                hint = Hint(message: String(localized: "Download Requested"), color: nil)
+            } catch {
+                hint = Hint(message: String(localized: "Unable to retrieve download URL. Please try again later.") + "\n" + error.localizedDescription, color: .red)
+                throw error
+            }
+        } label: {
+            VStack(alignment: .leading) {
+                HStack {
+                    Text(package.software.version)
+                    Spacer()
+                    Text(title)
+                }
+
+                if let hint {
+                    Text(hint.message)
+                        .foregroundStyle(hint.color ?? .primary)
+                }
+            }
+        }
+        .disabledWhenLoading()
     }
 }

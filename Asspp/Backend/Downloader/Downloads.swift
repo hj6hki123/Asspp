@@ -48,8 +48,14 @@ class Downloads {
         _manifests.save()
     }
 
+    func downloadRequests(forArchive archive: AppStore.AppPackage) -> [PackageManifest] {
+        manifests.filter { $0.package.id == archive.id && $0.package.externalVersionID == archive.externalVersionID }
+    }
+
     func downloadRequest(forArchive archive: AppStore.AppPackage) -> PackageManifest? {
-        manifests.first { $0.package.id == archive.id && $0.package.externalVersionID == archive.externalVersionID }
+        downloadRequests(forArchive: archive)
+            .sorted { $0.creation > $1.creation }
+            .first
     }
 
     func add(request: PackageManifest) -> PackageManifest {
