@@ -21,7 +21,7 @@ extension AppStore {
             let appleAccount = try await ApplePackage.Authenticator.authenticate(
                 email: email,
                 password: password,
-                code: code.isEmpty ? "" : code,
+                code: code,
                 cookies: [],
             )
             let userAccount = save(email: email, account: appleAccount)

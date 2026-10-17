@@ -66,7 +66,7 @@ extension Downloads {
                 app: package.software,
                 externalVersionID: package.externalVersionID,
             )
-            let request = Downloads.this.add(request: .init(
+            let request = try Downloads.this.add(request: .init(
                 account: account,
                 package: package,
                 downloadOutput: downloadOutput,

@@ -7,6 +7,10 @@
 
 import SwiftUI
 
+#if os(macOS)
+    import AppKit
+#endif
+
 struct MainView: View {
     var body: some View {
         #if os(macOS)
@@ -28,8 +32,8 @@ struct MainView: View {
                     SidebarRow(section: section, downloads: downloads.runningTaskCount)
                         .tag(section)
                 }
-                .frame(minWidth: 220)
                 .listStyle(.sidebar)
+                .navigationSplitViewColumnWidth(min: 150, ideal: 150, max: 200)
             } detail: {
                 Group {
                     if let selection {
@@ -38,8 +42,11 @@ struct MainView: View {
                         detailView(for: .home)
                     }
                 }
-                .frame(minWidth: 400, minHeight: 250)
+                .frame(minHeight: 250)
+                .navigationSplitViewColumnWidth(min: 480, ideal: 500)
             }
+            // Expose the selection so menu commands (⌘F, ⌘,) can drive it.
+            .focusedSceneValue(\.sidebarSelection, $selection)
         }
 
         @ViewBuilder
@@ -61,7 +68,7 @@ struct MainView: View {
         }
     }
 
-    private enum SidebarSection: Hashable, CaseIterable, Identifiable {
+    enum SidebarSection: Hashable, CaseIterable, Identifiable {
         case home
         case accounts
         case search
@@ -124,6 +131,43 @@ struct MainView: View {
                         .background(Color.accentColor.opacity(0.2))
                         .clipShape(Capsule())
                         .foregroundStyle(Color.accentColor)
+                }
+            }
+        }
+    }
+
+    private struct SidebarSelectionKey: FocusedValueKey {
+        typealias Value = Binding<SidebarSection?>
+    }
+
+    extension FocusedValues {
+        var sidebarSelection: Binding<SidebarSection?>? {
+            get { self[SidebarSelectionKey.self] }
+            set { self[SidebarSelectionKey.self] = newValue }
+        }
+    }
+
+    /// Menu commands that jump to sidebar sections by keyboard shortcut.
+    struct SidebarMenuCommands: Commands {
+        @FocusedValue(\.sidebarSelection) private var selection
+
+        var body: some Commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") { selection?.wrappedValue = .settings }
+                    .keyboardShortcut(",", modifiers: .command)
+                    .disabled(selection == nil)
+            }
+            CommandGroup(after: .sidebar) {
+                Button("Search") {
+                    selection?.wrappedValue = .search
+                    SearchFieldFocus.shared.requestFocus()
+                }
+                .keyboardShortcut("f", modifiers: .command)
+                .disabled(selection == nil)
+            }
+            CommandGroup(replacing: .help) {
+                Button("Asspp Help", systemImage: "") {
+                    NSWorkspace.shared.open(URL(string: "https://github.com/Lakr233/Asspp")!)
                 }
             }
         }

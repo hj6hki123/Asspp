@@ -11,7 +11,6 @@ The goal is to make Asspp useful as an IPA acquisition and archive manager while
 - Users can export downloaded IPA files through the system share sheet, AirDrop on iOS, or Finder on macOS.
 - The same app version can be downloaded multiple times, so users do not need to delete an existing download before obtaining another copy.
 - The macOS connected-device update flow downloads the newer IPA by default. If install options are enabled, it can still install with `devicectl`.
-- The GitHub Actions build workflow now selects an Xcode installation that actually contains the required iPhoneOS SDK.
 - Project documentation now separates "signing Asspp itself" from "signing downloaded IPA files."
 
 ## User-Facing Behavior Changes
@@ -50,14 +49,13 @@ Original behavior:
 Fork behavior:
 
 - Product pages now show both `Show Download` and `Download Again` when a matching download already exists.
-- Version rows can also request another copy of an already downloaded version.
+- Version history rows always request a new copy, even for an already downloaded version.
 - The download lookup returns the newest matching request, while all copies remain in the download list.
 
 Touched files:
 
 - `Asspp/Backend/Downloader/Downloads.swift`
 - `Asspp/Interface/Search/ProductView.swift`
-- `Asspp/Interface/Search/ProductVersionView.swift`
 
 ### Update Flow Downloads IPA Instead Of Installing
 
@@ -102,19 +100,7 @@ Related files:
 
 ### Build App Workflow
 
-Original behavior:
-
-- `.github/workflows/build.yml` selected `/Applications/Xcode_26.0.app` directly.
-- On runners where that Xcode installation existed but did not include the iPhoneOS SDK, the iOS job failed before compilation with no matching `generic/platform=iOS` destination.
-
-Fork behavior:
-
-- The iOS job now tries several Xcode installations and only accepts one where `xcodebuild -showsdks` contains `iphoneos`.
-- The macOS job also selects the first available Xcode installation and prints the selected version.
-
-Touched file:
-
-- `.github/workflows/build.yml`
+The fork previously patched `.github/workflows/build.yml` to pick an Xcode installation that contained the iPhoneOS SDK. Upstream has since fixed the same problem by selecting the newest non-beta Xcode and running `xcodebuild -downloadPlatform iOS`, so this fork now uses the upstream workflow unchanged.
 
 ### Upstream Signed iOS Build
 
@@ -132,7 +118,6 @@ Touched file:
 
 ## Files Changed By This Fork
 
-- `.github/workflows/build.yml`
 - `.github/workflows/upstream-signed-ios.yml`
 - `AGENTS.md`
 - `Asspp/Backend/AppSettings.swift`
@@ -142,8 +127,9 @@ Touched file:
 - `Asspp/Backend/Downloader/Downloads.swift`
 - `Asspp/Interface/Download/PackageView.swift`
 - `Asspp/Interface/Installed/InstalledListView.swift`
-- `Asspp/Interface/Search/ProductVersionView.swift`
 - `Asspp/Interface/Search/ProductView.swift`
+- `Asspp/Interface/Setting/SettingView.swift`
+- `Asspp/Interface/Welcome/WelcomeView.swift`
 
 ## Not Changed
 

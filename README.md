@@ -98,3 +98,5 @@ MIT License. See [LICENSE](./LICENSE) for details.
 ---
 
 Copyright © 2025 Lakr Aream. All Rights Reserved.
+
+<img src="./Artworks/fable5.jpg" alt="Fable 5 Verified" width="240">

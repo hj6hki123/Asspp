@@ -5,7 +5,6 @@
 //  Created by 秋星桥 on 2024/7/11.
 //
 
-import AnyCodable
 import ApplePackage
 @preconcurrency import Digger
 import Foundation
@@ -22,6 +21,19 @@ class Downloads {
     @ObservationIgnored
     private var lastProgressUpdates: [UUID: CFAbsoluteTime] = [:]
 
+    // Manifest IDs whose Digger callbacks are already attached, so a
+    // pause/resume cycle does not register a second completion handler (which
+    // would run finalize() twice and destroy the downloaded bytes).
+    @ObservationIgnored
+    private var registeredCallbacks: Set<UUID> = []
+
+    private static let speedFormatter: ByteCountFormatter = {
+        let fmt = ByteCountFormatter()
+        fmt.allowedUnits = .useAll
+        fmt.countStyle = .file
+        return fmt
+    }()
+
     var manifests: [PackageManifest] {
         get {
             access(keyPath: \.manifests)
@@ -34,14 +46,21 @@ class Downloads {
         }
     }
 
-    var runningTaskCount: Int {
-        manifests.count(where: { $0.state.status == .downloading })
+    // Stored, not computed: a computed property would read each manifest's
+    // `state`, so every download progress tick would invalidate the badge,
+    // sidebar, and AppDelegate observers and re-render the whole TabView.
+    // Refresh it only when a status actually transitions.
+    private(set) var runningTaskCount: Int = 0
+
+    private func refreshRunningTaskCount() {
+        runningTaskCount = manifests.count(where: { $0.state.status == .downloading })
     }
 
-    init() {
+    private init() {
         for idx in manifests.indices {
             manifests[idx].state.resetIfNotCompleted()
         }
+        refreshRunningTaskCount()
     }
 
     func saveManifests() {
@@ -69,23 +88,33 @@ class Downloads {
         logger.info("suspending download request id: \(request.id)")
         DiggerManager.shared.stopTask(for: request.url)
         request.state.resetIfNotCompleted()
+        refreshRunningTaskCount()
         saveManifests()
     }
 
     func resume(request: PackageManifest) {
         logger.info("resuming download request id: \(request.id)")
         request.state.start()
-        DiggerManager.shared.download(with: request.url)
+        let seed = DiggerManager.shared.download(with: request.url)
+
+        // Only attach callbacks once per manifest; a pause/resume cycle reuses
+        // the existing Digger seed and must not stack a second completion.
+        guard registeredCallbacks.insert(request.id).inserted else {
+            DiggerManager.shared.startTask(for: request.url)
+            saveManifests()
+            return
+        }
+
+        seed
             .speed { speedBytes in
                 Task { @MainActor in
                     guard request.state.status == .downloading || request.state.status == .pending else { return }
-                    let fmt = ByteCountFormatter()
-                    fmt.allowedUnits = .useAll
-                    fmt.countStyle = .file
+                    let wasDownloading = request.state.status == .downloading
                     var newState = request.state
                     newState.status = .downloading
-                    newState.speed = fmt.string(fromByteCount: Int64(speedBytes))
+                    newState.speed = Self.speedFormatter.string(fromByteCount: Int64(speedBytes))
                     request.state = newState
+                    if !wasDownloading { self.refreshRunningTaskCount() }
                 }
             }
             .progress { progress in
@@ -97,14 +126,17 @@ class Downloads {
                     guard fraction >= 1.0 || (now - last) >= 0.2 else { return }
                     self.lastProgressUpdates[request.id] = now
 
+                    let wasDownloading = request.state.status == .downloading
                     var newState = request.state
                     newState.status = .downloading
                     newState.percent = fraction
                     request.state = newState
+                    if !wasDownloading { self.refreshRunningTaskCount() }
                 }
             }
             .completion { completion in
                 Task { @MainActor in
+                    self.registeredCallbacks.remove(request.id)
                     switch completion {
                     case let .success(url):
                         Task.detached {
@@ -112,11 +144,13 @@ class Downloads {
                                 try await self.finalize(manifest: request, preparedContentAt: url)
                                 await MainActor.run {
                                     request.state.complete()
+                                    self.refreshRunningTaskCount()
                                     self.saveManifests()
                                 }
                             } catch {
                                 await MainActor.run {
                                     request.state.error = error.localizedDescription
+                                    self.refreshRunningTaskCount()
                                     self.saveManifests()
                                 }
                             }
@@ -131,6 +165,7 @@ class Downloads {
                             request.state.error = error.localizedDescription
                             self.saveManifests()
                         }
+                        self.refreshRunningTaskCount()
                     }
                 }
             }
@@ -168,13 +203,16 @@ class Downloads {
     func delete(request: PackageManifest) {
         logger.info("deleting download request id: \(request.id)")
         DiggerManager.shared.cancelTask(for: request.url)
+        registeredCallbacks.remove(request.id)
         request.delete()
         manifests.removeAll(where: { $0.id == request.id })
+        refreshRunningTaskCount()
     }
 
     func restart(request: PackageManifest) {
         logger.info("restarting download request id: \(request.id)")
         DiggerManager.shared.cancelTask(for: request.url)
+        registeredCallbacks.remove(request.id)
         request.delete()
         request.state = .init()
         resume(request: request)
@@ -183,5 +221,7 @@ class Downloads {
     func removeAll() {
         manifests.forEach { $0.delete() }
         manifests.removeAll()
+        registeredCallbacks.removeAll()
+        refreshRunningTaskCount()
     }
 }

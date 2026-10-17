@@ -14,31 +14,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode
+      - name: Select newest non-beta Xcode
         run: |
           set -euo pipefail
-          for XCODE_APP in \
-            /Applications/Xcode_26.3.app \
-            /Applications/Xcode_26.2.app \
-            /Applications/Xcode_26.1.app \
-            /Applications/Xcode_26.0.app \
-            /Applications/Xcode_16.4.app \
-            /Applications/Xcode_16.3.app \
-            /Applications/Xcode.app
-          do
-            if [ -d "${XCODE_APP}" ]; then
-              sudo xcode-select -s "${XCODE_APP}"
-              if xcodebuild -showsdks 2>/dev/null | grep -q "iphoneos"; then
-                echo "Selected: ${XCODE_APP}"
-                xcodebuild -version
-                xcodebuild -showsdks | grep iphoneos
-                exit 0
-              fi
+          best_path=""
+          best_ver=""
+          for app in /Applications/Xcode*.app; do
+            [ -d "$app" ] || continue
+            info="$app/Contents/Info.plist"
+            [ -f "$info" ] || continue
+            # Skip beta/release-candidate installs.
+            case "$(printf '%s' "$app" | tr '[:upper:]' '[:lower:]')" in
+              *beta*|*_rc*) continue ;;
+            esac
+            ver="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$info" 2>/dev/null || true)"
+            [ -n "$ver" ] || continue
+            if [ -z "$best_ver" ] || [ "$(printf '%s\n%s\n' "$best_ver" "$ver" | sort -V | tail -1)" = "$ver" ]; then
+              best_ver="$ver"
+              best_path="$app"
             fi
           done
+          if [ -z "$best_path" ]; then
+            echo "::error::No non-beta Xcode found"
+            exit 1
+          fi
+          echo "Selected Xcode $best_ver at $best_path"
+          sudo xcode-select -s "$best_path"
+          xcodebuild -version
 
-          echo "No Xcode installation with an iPhoneOS SDK was found."
-          exit 1
+      - name: Ensure iOS platform is installed
+        run: xcodebuild -downloadPlatform iOS || true
 
       - name: Install Procursus
         uses: dhinakg/procursus-action@main
@@ -63,28 +68,33 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode
+      - name: Select newest non-beta Xcode
         run: |
           set -euo pipefail
-          for XCODE_APP in \
-            /Applications/Xcode_26.3.app \
-            /Applications/Xcode_26.2.app \
-            /Applications/Xcode_26.1.app \
-            /Applications/Xcode_26.0.app \
-            /Applications/Xcode_16.4.app \
-            /Applications/Xcode_16.3.app \
-            /Applications/Xcode.app
-          do
-            if [ -d "${XCODE_APP}" ]; then
-              sudo xcode-select -s "${XCODE_APP}"
-              echo "Selected: ${XCODE_APP}"
-              xcodebuild -version
-              exit 0
+          best_path=""
+          best_ver=""
+          for app in /Applications/Xcode*.app; do
+            [ -d "$app" ] || continue
+            info="$app/Contents/Info.plist"
+            [ -f "$info" ] || continue
+            # Skip beta/release-candidate installs.
+            case "$(printf '%s' "$app" | tr '[:upper:]' '[:lower:]')" in
+              *beta*|*_rc*) continue ;;
+            esac
+            ver="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$info" 2>/dev/null || true)"
+            [ -n "$ver" ] || continue
+            if [ -z "$best_ver" ] || [ "$(printf '%s\n%s\n' "$best_ver" "$ver" | sort -V | tail -1)" = "$ver" ]; then
+              best_ver="$ver"
+              best_path="$app"
             fi
           done
-
-          echo "No Xcode installation was found."
-          exit 1
+          if [ -z "$best_path" ]; then
+            echo "::error::No non-beta Xcode found"
+            exit 1
+          fi
+          echo "Selected Xcode $best_ver at $best_path"
+          sudo xcode-select -s "$best_path"
+          xcodebuild -version
 
       - name: Install Procursus
         uses: dhinakg/procursus-action@main

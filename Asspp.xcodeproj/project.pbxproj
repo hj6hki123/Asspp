@@ -31,7 +31,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		50DCBC2D2F346C6F007100D2 /* Exceptions for "Asspp" folder in "Asspp" target */ = {
+		50DCBC2D2F346C6F007100D2 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -46,29 +46,8 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		50DCBBB42F346C57007100D2 /* Configuration */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = Configuration;
-			sourceTree = "<group>";
-		};
-		50DCBBF92F346C6F007100D2 /* Asspp */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				50DCBC2D2F346C6F007100D2 /* Exceptions for "Asspp" folder in "Asspp" target */,
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = Asspp;
-			sourceTree = "<group>";
-		};
+		50DCBBB42F346C57007100D2 /* Configuration */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Configuration; sourceTree = "<group>"; };
+		50DCBBF92F346C6F007100D2 /* Asspp */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (50DCBC2D2F346C6F007100D2 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Asspp; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -374,6 +353,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				MARKETING_VERSION = 4.2.0;
 			};
 			name = Debug;
 		};
@@ -394,6 +374,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				MARKETING_VERSION = 4.2.0;
 			};
 			name = Release;
 		};
@@ -434,7 +415,7 @@
 			repositoryURL = "https://github.com/Lakr233/ApplePackage";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.2.3;
+				minimumVersion = 1.2.7;
 			};
 		};
 		50ABFE1D2F48AAE50077DE1A /* XCRemoteSwiftPackageReference "ButtonKit" */ = {
