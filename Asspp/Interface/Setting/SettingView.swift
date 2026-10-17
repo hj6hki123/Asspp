@@ -29,6 +29,14 @@ struct SettingView: View {
         }
     }
 
+    private func saveDeviceID() {
+        let trimmed = deviceIdDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        // The AppStore setter also propagates this to ApplePackage.Configuration.
+        vm.deviceIdentifier = trimmed
+        editingDeviceId = false
+    }
+
     private var formContent: some View {
         Form {
             Section {
@@ -60,26 +68,14 @@ struct SettingView: View {
                     #endif
                     #if os(macOS)
                         HStack {
-                            Button("Save") {
-                                let trimmed = deviceIdDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-                                guard !trimmed.isEmpty else { return }
-                                vm.deviceIdentifier = trimmed
-                                ApplePackage.Configuration.deviceIdentifier = trimmed
-                                editingDeviceId = false
-                            }
+                            Button("Save") { saveDeviceID() }
                             Button("Cancel", role: .destructive) {
                                 editingDeviceId = false
                             }
                             Spacer()
                         }
                     #else
-                        Button("Save") {
-                            let trimmed = deviceIdDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-                            guard !trimmed.isEmpty else { return }
-                            vm.deviceIdentifier = trimmed
-                            ApplePackage.Configuration.deviceIdentifier = trimmed
-                            editingDeviceId = false
-                        }
+                        Button("Save") { saveDeviceID() }
                         Button("Cancel", role: .destructive) {
                             editingDeviceId = false
                         }

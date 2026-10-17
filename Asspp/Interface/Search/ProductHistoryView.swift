@@ -102,12 +102,16 @@ struct ProductHistoryView: View {
         }
         .alert("Oops", isPresented: $showErrorAlert) {
             Button("OK") {
+                vm.error = nil
                 if vm.shouldDismiss {
                     dismiss()
                 }
             }
         } message: {
             Text(vm.error ?? String(localized: "Unknown Error"))
+        }
+        .onChange(of: vm.error) { _, newValue in
+            showErrorAlert = newValue != nil
         }
         .onAppear {
             guard vm.versionItems.isEmpty else { return }

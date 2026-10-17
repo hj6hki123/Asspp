@@ -14,13 +14,28 @@ struct ArchivePreviewView: View {
     var preferredIconSize: CGFloat?
     var lineLimit: Int? = 1
 
+    private var iconSize: CGFloat { preferredIconSize ?? 50 }
+
+    private var screenScale: CGFloat {
+        #if canImport(UIKit)
+            UIScreen.main.scale
+        #else
+            NSScreen.main?.backingScaleFactor ?? 2
+        #endif
+    }
+
     var body: some View {
         HStack(spacing: 8) {
             KFImage(URL(string: archive.software.artworkUrl))
+                // Downsample the 512x512 artwork to the cell size instead of
+                // decoding it at full resolution for a ~50pt icon.
+                .setProcessor(DownsamplingImageProcessor(size: CGSize(width: iconSize, height: iconSize)))
+                .scaleFactor(screenScale)
+                .cacheOriginalImage()
                 .antialiased(true)
                 .resizable()
-                .clipShape(.rect(cornerRadius: 0.2184466 * (preferredIconSize ?? 50)))
-                .frame(width: preferredIconSize ?? 50, height: preferredIconSize ?? 50, alignment: .center)
+                .clipShape(.rect(cornerRadius: 0.2184466 * iconSize))
+                .frame(width: iconSize, height: iconSize, alignment: .center)
                 .shadow(radius: 1)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline) {

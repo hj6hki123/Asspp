@@ -46,6 +46,7 @@ class AppStore {
             withMutation(keyPath: \.deviceIdentifier) {
                 _deviceIdentifier.wrappedValue = newValue
             }
+            ApplePackage.Configuration.deviceIdentifier = newValue
         }
     }
 
@@ -105,14 +106,18 @@ class AppStore {
     }
 
     nonisolated func withAccount<T>(id: String, _ body: (inout UserAccount) async throws -> T) async throws -> T {
-        if let idx = await accounts.firstIndex(where: { $0.id == id }) {
-            var account = await accounts[idx]
-            let result = try await body(&account)
-            let updatedAccount = account
-            await MainActor.run { accounts[idx] = updatedAccount }
-            return result
-        } else {
+        guard var account = await accounts.first(where: { $0.id == id }) else {
             throw AuthenticationError.accountNotFound
         }
+        let result = try await body(&account)
+        let updatedAccount = account
+        // Re-resolve by id: the accounts array may have been mutated (added,
+        // removed, re-sorted) during the await, so the original index is stale.
+        await MainActor.run {
+            if let idx = accounts.firstIndex(where: { $0.id == id }) {
+                accounts[idx] = updatedAccount
+            }
+        }
+        return result
     }
 }

@@ -11,14 +11,23 @@ import Logging
 final nonisolated class LogManager: Sendable {
     static let shared = LogManager()
 
+    private static let maxMessages = 2000
+
     private let messageQueue = DispatchQueue(label: "wiki.qaq.log")
+    // Confined to messageQueue, so a single formatter instance is safe to reuse.
+    private nonisolated(unsafe) let timestampFormatter = ISO8601DateFormatter()
     private nonisolated(unsafe) var messages: [String] = []
 
     func write(_ content: String) {
         messageQueue.async {
-            let timestamp = ISO8601DateFormatter().string(from: Date())
+            let timestamp = self.timestampFormatter.string(from: Date())
             let logMessage = "[\(timestamp)]\n\(content)"
             self.messages.append(logMessage)
+            // Cap retained history so a long-running session cannot grow memory
+            // without bound.
+            if self.messages.count > Self.maxMessages {
+                self.messages.removeFirst(self.messages.count - Self.maxMessages)
+            }
         }
     }
 

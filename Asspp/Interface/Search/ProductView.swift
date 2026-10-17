@@ -90,17 +90,9 @@ struct ProductView: View {
 
             return Group {
                 Button("Acquire License", role: confirmRole) {
-                    guard let account else { return }
                     Task {
                         do {
-                            try await vm.withAccount(id: account.id) { userAccount in
-                                try await ApplePackage.Authenticator.rotatePasswordToken(for: &userAccount.account)
-                                try await ApplePackage.Purchase.purchase(
-                                    account: &userAccount.account,
-                                    app: archive.package.software,
-                                )
-                            }
-                            licenseHint = Hint(message: String(localized: "Request Succeeded"), color: .green)
+                            try await acquireLicense()
                         } catch {
                             licenseHint = Hint(message: error.localizedDescription, color: .red)
                         }
@@ -112,11 +104,28 @@ struct ProductView: View {
         } message: {}
     }
 
+    /// Rotates the password token and requests a license for the current
+    /// account. Sets `licenseHint` to a success message; callers handle errors.
+    private func acquireLicense() async throws {
+        guard let account else { return }
+        try await vm.withAccount(id: account.id) { userAccount in
+            try await ApplePackage.Authenticator.rotatePasswordToken(for: &userAccount.account)
+            try await ApplePackage.Purchase.purchase(
+                account: &userAccount.account,
+                app: archive.package.software,
+            )
+        }
+        licenseHint = Hint(message: String(localized: "Request Succeeded"), color: .green)
+    }
+
     var packageHeader: some View {
         Section {
             PackageDisplayView(archive: archive.package)
             NavigationLink {
-                ProductHistoryView(vm: AppPackageArchive(accountID: selection, region: region, package: archive.package))
+                // Build the archive lazily: constructing it eagerly here runs
+                // two synchronous file reads + a JSON decode on every body
+                // evaluation, even before the user navigates.
+                LazyView(ProductHistoryView(vm: AppPackageArchive(accountID: selection, region: region, package: archive.package)))
             } label: {
                 let badgeText = archive.releaseDate.flatMap { date in
                     Text(date.formatted(.relative(presentation: .numeric)))
@@ -167,15 +176,7 @@ struct ProductView: View {
             Text("\(archive.formattedPrice ?? "N/A")")
             if archive.price == 0 {
                 AsyncButton {
-                    guard let account else { return }
-                    try await vm.withAccount(id: account.id) { userAccount in
-                        try await ApplePackage.Authenticator.rotatePasswordToken(for: &userAccount.account)
-                        try await ApplePackage.Purchase.purchase(
-                            account: &userAccount.account,
-                            app: archive.package.software,
-                        )
-                    }
-                    licenseHint = Hint(message: String(localized: "Request Succeeded"), color: .green)
+                    try await acquireLicense()
                 } label: {
                     Text("Acquire License")
                 }
@@ -270,5 +271,19 @@ extension AppStore.AppPackage {
     var displaySupportedDevicesIcon: String {
         // TODO: assuming iPhone for now
         "iphone"
+    }
+}
+
+/// Defers building its content until the view is actually rendered, so an
+/// expensive destination is not constructed eagerly inside a NavigationLink.
+struct LazyView<Content: View>: View {
+    private let build: () -> Content
+
+    init(_ build: @autoclosure @escaping () -> Content) {
+        self.build = build
+    }
+
+    var body: Content {
+        build()
     }
 }

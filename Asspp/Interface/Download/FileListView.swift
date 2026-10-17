@@ -21,26 +21,36 @@ struct FileListView: View {
     @State var message = ""
     @State var searchText = ""
 
-    var interfaceItems: [Entry] {
-        let inputWithPrefix = items
-            .filter { input in
-                var inputPath = input.path
-                if !inputPath.hasPrefix("/") { inputPath = "/" + inputPath }
-                let inputURL = URL(fileURLWithPath: inputPath)
+    // Parent path + lowercased file name precomputed once per entry, so
+    // filtering on each keystroke is plain string comparison rather than three
+    // URL allocations per entry.
+    private struct IndexedEntry {
+        let parent: String
+        let name: String
+        let entry: Entry
+    }
 
-                return inputURL.deletingLastPathComponent().path == prefix.path
-            }
-        return if searchText.isEmpty {
-            inputWithPrefix
-        } else {
-            inputWithPrefix.filter {
-                $0.path
-                    .components(separatedBy: "/")
-                    .last?
-                    .lowercased()
-                    .contains(searchText.lowercased())
-                    ?? false
-            }
+    @State private var indexed: [IndexedEntry] = []
+
+    private func buildIndex(from entries: [Entry]) -> [IndexedEntry] {
+        entries.map { entry in
+            var path = entry.path
+            if !path.hasPrefix("/") { path = "/" + path }
+            let url = URL(fileURLWithPath: path)
+            return IndexedEntry(
+                parent: url.deletingLastPathComponent().path,
+                name: url.lastPathComponent.lowercased(),
+                entry: entry,
+            )
+        }
+    }
+
+    var interfaceItems: [Entry] {
+        let search = searchText.lowercased()
+        return indexed.compactMap { row in
+            guard row.parent == prefix.path else { return nil }
+            guard search.isEmpty || row.name.contains(search) else { return nil }
+            return row.entry
         }
     }
 
@@ -102,8 +112,10 @@ struct FileListView: View {
         while let file = files.next() {
             buildList.append(file)
         }
+        let index = buildIndex(from: buildList)
         await MainActor.run {
             items = buildList
+            indexed = index
         }
         try? await Task.sleep(nanoseconds: 100_000_000)
         await MainActor.run {

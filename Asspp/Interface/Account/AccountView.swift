@@ -51,7 +51,7 @@ struct AccountView: View {
                 .width(min: 40, ideal: 60, max: 80)
 
                 TableColumn("Storefront") { account in
-                    Text(ApplePackage.Configuration.countryCode(for: account.account.store) ?? "-")
+                    Text(ApplePackage.Configuration.countryCode(for: account.account.store) ?? String(localized: "Unknown"))
                 }
                 .width(min: 60, ideal: 80, max: 120)
 

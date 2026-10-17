@@ -9,16 +9,29 @@ import ApplePackage
 import Kingfisher
 import SwiftUI
 
+/// Lets menu commands ask the search field to take focus. SearchView consumes
+/// the request on its next appearance, or immediately if already visible, and
+/// clears it — so the one-shot survives the view being recreated when the user
+/// switches sidebar sections.
+@MainActor
+@Observable
+final class SearchFieldFocus {
+    static let shared = SearchFieldFocus()
+    var pending = false
+    func requestFocus() { pending = true }
+}
+
 struct SearchView: View {
     @AppStorage("searchKey") var searchKey = ""
     @AppStorage("searchRegion") var searchRegion = "US"
     @FocusState var searchKeyFocused
+    @State private var searchFocus = SearchFieldFocus.shared
     @State private var searchType = EntityType.iPhone
 
     @State private var searching = false
     let regionKeys = Array(ApplePackage.Configuration.storeFrontValues.keys.sorted())
 
-    @State private var searchInput: String = ""
+    @State private var searchError: String?
     #if DEBUG
         @AppStorage("searchResults") // reduce API calls
         var searchResult: [AppStore.AppPackage] = []
@@ -66,40 +79,31 @@ struct SearchView: View {
         regionKeys.filter { possibleRegion.contains($0) }
     }
 
-    func searchRegionView(isAllRegionsWrappedInMenu: Bool = true) -> some View {
-        Group {
+    func searchRegionView() -> some View {
+        Menu {
             if !possibleRegionKeys.isEmpty {
                 buildPickView(
                     for: possibleRegionKeys,
                 ) {
                     Label("Available Regions", systemImage: "checkmark.seal")
                 }
-                if isAllRegionsWrappedInMenu {
-                    Menu {
-                        buildPickView(
-                            for: regionKeys,
-                        ) {
-                            EmptyView()
-                        }
-                    } label: {
-                        Label("All Regions", systemImage: "globe")
-                    }
-                } else {
-                    // Wrapping in Menu on macOS will cause an addition hover to show all the regions
-                    buildPickView(
-                        for: regionKeys,
-                    ) {
-                        Label("All Regions", systemImage: "globe")
-                    }
-                }
-            } else {
-                // Reduce one interaction
+                .pickerStyle(.inline)
+
                 buildPickView(
                     for: regionKeys,
                 ) {
-                    EmptyView()
+                    Label("All Regions", systemImage: "globe")
                 }
+                .pickerStyle(.menu)
+            } else {
+                buildPickView(
+                    for: regionKeys,
+                ) {
+                }
+                .pickerStyle(.inline)
             }
+        } label: {
+            Label(searchRegion, systemImage: "globe")
         }
         .onChange(of: searchRegion) { _, _ in
             searchResult = []
@@ -111,21 +115,28 @@ struct SearchView: View {
         ToolbarItem(placement: .automatic) {
             Menu {
                 searchTypePicker
-                    .pickerStyle(.menu)
-                Divider()
-                #if os(iOS)
-                    searchRegionView()
-                #else
-                    searchRegionView(isAllRegionsWrappedInMenu: false)
-                #endif
+                    .labelsHidden()
+                    .pickerStyle(.inline)
             } label: {
-                Image(systemName: "ellipsis.circle")
+                Label("Type", systemImage: searchType.iconName)
             }
+            .menuIndicator(.hidden)
+        }
+
+        ToolbarItem(placement: .automatic) {
+            searchRegionView()
+                .menuIndicator(.hidden)
         }
     }
 
     var content: some View {
         Form {
+            if let searchError {
+                Section {
+                    Text(searchError)
+                        .foregroundStyle(.red)
+                }
+            }
             if searching || !searchResult.isEmpty {
                 Section(searching ? "Searching..." : "\(searchResult.count) Results") {
                     ForEach(searchResult) { item in
@@ -139,6 +150,7 @@ struct SearchView: View {
             }
         }
         .formStyle(.grouped)
+        .animation(.spring, value: searchError)
         .navigationDestination(for: ProductDestination.self) { dest in
             ProductView(archive: dest.archive, region: dest.region, navigationPath: $navigationPath)
         }
@@ -146,9 +158,23 @@ struct SearchView: View {
             PackageView(pkg: manifest)
         }
         .animation(.spring, value: searchResult)
+        .onAppear { consumePendingFocus() }
+        .onChange(of: searchFocus.pending) { _, isPending in
+            if isPending { consumePendingFocus() }
+        }
     }
 
-    func buildPickView(for keys: [String], label: () -> some View) -> some View {
+    /// Focuses the search field if a focus request is pending (e.g. after the
+    /// ⌘F menu command on macOS), then clears the request.
+    private func consumePendingFocus() {
+        guard searchFocus.pending else { return }
+        searchFocus.pending = false
+        // Defer so the search field exists when focus is assigned, whether the
+        // view was already visible or is appearing for the first time.
+        DispatchQueue.main.async { searchKeyFocused = true }
+    }
+
+    func buildPickView(for keys: [String], @ViewBuilder label: () -> some View) -> some View {
         Picker(selection: $searchRegion) {
             ForEach(keys, id: \.self) { key in
                 Text("\(key) - \(ApplePackage.Configuration.storeFrontValues[key] ?? String(localized: "Unknown"))")
@@ -162,7 +188,7 @@ struct SearchView: View {
     func search() {
         searchKeyFocused = false
         searching = true
-        searchInput = "\(searchRegion) - \(searchKey)" + " ..."
+        searchError = nil
         logger.info("search: term=\(searchKey) region=\(searchRegion) type=\(searchType.rawValue)")
         Task {
             do {
@@ -182,14 +208,14 @@ struct SearchView: View {
                 await MainActor.run {
                     searching = false
                     searchResult = result.map { AppStore.AppPackage(software: $0) }
-                    searchInput = "\(searchRegion) - \(searchKey)"
+                    searchError = nil
                 }
             } catch {
                 logger.error("search failed: term=\(searchKey) error=\(error.localizedDescription)")
                 await MainActor.run {
                     searching = false
                     searchResult = []
-                    searchInput = "\(searchRegion) - \(searchKey) - Error: \(error.localizedDescription)"
+                    searchError = error.localizedDescription
                 }
             }
         }
@@ -205,6 +231,9 @@ extension SearchView {
     var legacyContent: some View {
         content
             .searchable(text: $searchKey, prompt: "Keyword") {}
+            #if os(macOS)
+                .searchFocused($searchKeyFocused)
+            #endif
             .onSubmit(of: .search) { search() }
             .navigationTitle("Search - \(searchRegion.uppercased())")
             .toolbar { tools }
@@ -230,17 +259,17 @@ extension SearchView {
                 .safeAreaBar(edge: .top) {
                     if navigationBarVisibility == .hidden {
                         HStack {
-                            searchTypePicker
-                                .buttonStyle(.glass)
+                            Menu {
+                                searchTypePicker
+                            } label: {
+                                Label(searchType.rawValue, systemImage: searchType.iconName)
+                            }
+                            .buttonStyle(.glass)
+
                             Spacer()
 
-                            Menu {
-                                searchRegionView()
-                            } label: {
-                                Label(searchRegion, systemImage: "globe")
-                            }
-                            .menuIndicator(.visible)
-                            .buttonStyle(.glass)
+                            searchRegionView()
+                                .buttonStyle(.glass)
                         }
                         .padding([.bottom, .horizontal])
                     }
@@ -298,6 +327,8 @@ extension ApplePackage.EntityType {
             "iphone"
         case .iPad:
             "ipad"
+        case .appleTV:
+            "appletv"
         }
     }
 }

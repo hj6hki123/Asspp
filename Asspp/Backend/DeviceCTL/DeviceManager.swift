@@ -190,7 +190,10 @@
                 app.state = .installing
                 try await DeviceCTL.install(ipa: request.targetLocation, to: device, process: process)
                 app.info = updatedApp
-                installedApps[device.id, default: []].insert(app.info)
+                // update(with:) replaces the equal existing member; insert() would
+                // be a no-op here because equality ignores the version, leaving the
+                // stale version info in the set.
+                installedApps[device.id, default: []].update(with: app.info)
             } else {
                 app.state = .downloaded(request)
             }

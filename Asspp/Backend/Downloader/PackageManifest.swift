@@ -5,7 +5,6 @@
 //  Created by 秋星桥 on 2024/7/13.
 //
 
-import AnyCodable // Moved to Request.swift
 import ApplePackage
 import Foundation
 
@@ -49,16 +48,25 @@ class PackageManifest: Identifiable, Codable, Hashable, Equatable {
                 return
             }
             try? await Task.sleep(nanoseconds: UInt64(5e8))
-            if [.failed, .completed].contains(state.status) {
+            // .paused is terminal for waiters: a user-paused download will not
+            // progress on its own, so the update flow must not spin forever.
+            if [.failed, .completed, .paused].contains(state.status) {
                 return
             }
         }
     }
 
-    init(account: AppStore.UserAccount, package: AppStore.AppPackage, downloadOutput: ApplePackage.DownloadOutput) {
+    init(account: AppStore.UserAccount, package: AppStore.AppPackage, downloadOutput: ApplePackage.DownloadOutput) throws {
         self.account = account
         self.package = package
-        url = URL(string: downloadOutput.downloadURL)!
+        guard let url = URL(string: downloadOutput.downloadURL) else {
+            throw NSError(
+                domain: "Asspp.Download",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Invalid download URL: \(downloadOutput.downloadURL)"],
+            )
+        }
+        self.url = url
         signatures = downloadOutput.sinfs
         iTunesMetadata = downloadOutput.iTunesMetadata
         creation = .init()
@@ -89,21 +97,17 @@ class PackageManifest: Identifiable, Codable, Hashable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, account, package, url, md5, signatures, iTunesMetadata, metadata, creation, runtime
+        case id, account, package, url, signatures, iTunesMetadata, creation, runtime
     }
 
+    // Identity is the immutable UUID; hashing mutable fields like `state` would
+    // change a manifest's hash mid-download and break Set/Dictionary lookups.
     static func == (lhs: PackageManifest, rhs: PackageManifest) -> Bool {
-        lhs.hashValue == rhs.hashValue
+        lhs.id == rhs.id
     }
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
-        hasher.combine(account)
-        hasher.combine(package)
-        hasher.combine(url)
-        hasher.combine(signatures)
-        hasher.combine(creation)
-        hasher.combine(state)
     }
 }
 
